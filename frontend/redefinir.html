@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>pato.do.problema · Redefinir senha</title>
+<link rel="stylesheet" href="style.css?v=20260612b">
+<style>
+  .login-wrap{ min-height:100vh; display:flex; align-items:center; justify-content:center; padding:32px 20px; }
+  .card{ width:100%; max-width:420px; background:var(--surface); border:1px solid var(--border); padding:38px; }
+  @media(max-width:520px){ .card{ padding:30px 22px; } }
+</style>
+</head>
+<body>
+<div class="login-wrap">
+  <div class="card">
+    <h1 style="font-size:24px">Redefinir senha</h1>
+    <p class="muted mb">Crie uma nova senha para sua conta.</p>
+    <div class="field"><label class="fl">Nova senha</label><input class="in" type="password" id="np"></div>
+    <button class="btn" style="width:100%" id="btn">Redefinir</button>
+    <div class="err" id="err"></div>
+    <p class="muted mt"><a href="index.html">Voltar ao login</a></p>
+  </div>
+</div>
+<script src="api.js"></script>
+<script>
+  const params = new URLSearchParams(location.search);
+  const resetToken = params.get("token");
+  const err = document.getElementById("err");
+  if(!resetToken){ err.textContent = "Link inválido (sem token)."; }
+  document.getElementById("btn").onclick = async ()=>{
+    err.textContent="";
+    if(!np.value){ err.textContent="Digite a nova senha."; return; }
+    try{
+      await api("/api/reset","POST",{ token: resetToken, password: np.value });
+      alert("Senha redefinida! Faça login com a nova senha.");
+      location.href="index.html";
+    }catch(e){ err.textContent = e.message; }
+  };
+</script>
+</body>
+</html>

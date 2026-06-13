@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: pato-do-problema
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: ANTHROPIC_MODEL
+        value: claude-sonnet-4-20250514
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ALLOWED_ORIGINS
+        value: https://pato-do-problema.onrender.com
+      - key: ALLOW_DEV_RESET_TOKEN
+        value: "false"
+      - key: ENABLE_PUBLIC_TECH_REGISTRATION
+        value: "false"
+      - key: SEED_DEMO
+        value: "false"

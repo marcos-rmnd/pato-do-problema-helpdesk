@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>pato.do.problema · Meus chamados</title>
+<link rel="stylesheet" href="style.css?v=20260612b">
+<style>
+@media(max-width:900px){
+  #viewDetail .grid2{ grid-template-columns:1fr; }
+}
+@media(max-width:600px){
+  .field input, .field textarea, select.in{ font-size:14px; }
+  #viewNew .panel{ padding:18px 14px; }
+  .seal{ width:48px!important;height:48px!important; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand">pato<b>.do.</b>problema</div>
+    <div class="user-box">
+      <span id="who"></span>
+      <span class="badge-role">Cliente</span>
+      <a href="faq.html" class="btn-ghost btn-sm">Base de Conhecimento</a>
+      <button class="btn-ghost btn-sm" onclick="openProfile()">Perfil</button>
+      <button class="btn-ghost btn-quiet" onclick="logout()">Sair</button>
+    </div>
+  </div>
+
+  <div id="viewList">
+    <div class="panel mb" style="max-width:100%">
+      <h2 style="margin-bottom:8px">Como funciona</h2>
+      <p class="muted" style="line-height:1.7">Abra o chamado com o máximo de contexto que tiver, descrevendo o problema com detalhes.
+      Escolha a prioridade adequada e o sistema sugere automaticamente a categoria e fila de atendimento.
+      Acompanhe as respostas, a timeline e todas as atualizações diretamente pelo chat do sistema.
+      O suporte retornará conforme o andamento do chamado.</p>
+    </div>
+    <div class="panel">
+      <div class="row-between mb">
+        <h2 style="margin:0">Meus chamados</h2>
+        <button class="btn btn-sm" id="btnNew">Abrir chamado</button>
+      </div>
+      <div class="toolbar">
+        <input class="in" id="ticketSearch" placeholder="Buscar por código ou título..." oninput="renderList()">
+        <select class="in compact" id="statusFilter" onchange="renderList()">
+          <option value="">Todos os status</option>
+          <option>Aberto</option><option>Em análise</option><option>Em atendimento</option>
+          <option>Aguardando cliente</option><option>Resolvido</option><option>Encerrado</option>
+        </select>
+        <select class="in compact" id="sortTickets" onchange="renderList()">
+          <option value="recent">Mais recentes</option>
+          <option value="priority">Prioridade</option>
+          <option value="sla">SLA</option>
+        </select>
+      </div>
+      <div id="list"></div>
+      <div class="empty-state muted" id="empty" style="display:none"><canvas class="empty-pato" id="emptyPatoClient" width="260" height="260" aria-hidden="true"></canvas><span>Você ainda não abriu chamados.</span></div>
+    </div>
+  </div>
+
+  <div id="viewNew" class="hidden">
+    <div class="panel" style="max-width:640px">
+      <div class="row-between mb"><h2 style="margin:0">Abrir chamado</h2>
+        <button class="btn-ghost btn-sm" onclick="showList()">Voltar</button></div>
+      <div class="field"><label class="fl">Título do problema</label><input class="in" id="nt"></div>
+      <div class="field"><label class="fl">Descrição detalhada</label><textarea class="in" id="nd" oninput="suggestKB()"></textarea></div>
+      <div class="field"><label class="fl">Prioridade</label>
+        <select class="in" id="np">
+          <option>Baixa</option>
+          <option selected>Média</option>
+          <option>Alta</option>
+          <option>Crítica</option>
+        </select>
+      </div>
+      <div id="kbSuggest" style="display:none" class="assist-box mb">
+        <div class="label">Antes de abrir o chamado, confira estes artigos:</div>
+        <div id="kbSuggestList"></div>
+      </div>
+      <input type="hidden" id="nc" value="Chat">
+      <div class="field"><label class="fl">Frequência de atualização</label>
+        <select class="in" id="nf">
+          <option>Apenas atualizações importantes</option>
+          <option>Atualizações automáticas</option>
+          <option>Acompanhamento prioritário</option>
+        </select>
+      </div>
+      <button class="btn" id="btnCreate">Criar chamado</button>
+      <div class="err" id="newErr"></div>
+    </div>
+  </div>
+
+  <div id="viewDetail" class="hidden">
+    <button class="btn-ghost btn-sm mb" onclick="showList()">Voltar</button>
+    <div class="grid2">
+      <div>
+        <div class="panel mb">
+          <div class="row-between">
+            <div>
+              <h2 style="margin:0" id="dTitle"></h2>
+              <div class="muted" id="dCode" style="font-size:12px;margin-top:4px"></div>
+            </div>
+            <div style="text-align:right">
+              <span class="chip" id="dPri"></span>
+              <span class="chip" id="dSla"></span>
+            </div>
+          </div>
+          <div class="detail-grid" id="dMeta"></div>
+          <div class="assist-box mt">
+            <div class="label">Resumo do chamado</div>
+            <div class="body" id="dSummary"></div>
+          </div>
+          <div class="row-between mt" style="font-size:13px;color:var(--muted)">
+            <span>Status: <b id="dStatus" style="color:var(--text)"></b></span>
+            <span>Estimativa: <b id="dEta" style="color:var(--text)"></b></span>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>Conversa</h2>
+          <div id="msgs"></div>
+          <div class="field mt"><textarea class="in" id="msgInput" placeholder="Escreva uma mensagem..."></textarea></div>
+          <button class="btn btn-sm" id="btnSend">Enviar</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="panel mb">
+          <h2>Timeline</h2>
+          <div class="timeline" id="timeline"></div>
+        </div>
+        <div class="panel mt">
+          <h2>Anexos</h2>
+          <div id="attList" class="mb"></div>
+          <input type="file" id="fileIn" style="font-size:12px;color:var(--muted)">
+          <button class="btn btn-sm mt" id="btnUp">Anexar arquivo</button>
+        </div>
+        <div class="panel mt">
+          <button class="btn-ghost btn-sm" id="btnClose" style="width:100%">Encerrar chamado</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="pato.js?v=20260612d"></script>
+<script src="api.js"></script>
+<script>
+guard("cliente");
+document.getElementById("who").textContent = uname();
+drawPatoSolid(document.getElementById("emptyPatoClient"));
+let currentId = null;
+let ticketsCache = [];
+
+const vList=document.getElementById("viewList"),
+      vNew=document.getElementById("viewNew"),
+      vDet=document.getElementById("viewDetail");
+
+function showList(){ vList.classList.remove("hidden"); vNew.classList.add("hidden"); vDet.classList.add("hidden"); revealView(vList); loadList(); }
+function showNew(){ vNew.classList.remove("hidden"); vList.classList.add("hidden"); vDet.classList.add("hidden"); nf.value=localStorage.getItem("pato_default_frequency")||nf.value; revealView(vNew); }
+document.getElementById("btnNew").onclick = showNew;
+
+async function loadList(){
+  const list = document.getElementById("list");
+  list.innerHTML = skeletonRows(3);
+  const ts = await api("/api/tickets");
+  ticketsCache = ts;
+  renderList();
+}
+
+function priorityWeight(p){ return ({Crítica:0, Alta:1, Média:2, Baixa:3})[p] ?? 4; }
+function slaWeight(t){ return ({late:0, warn:1, ok:2})[ticketSla(t).state] ?? 3; }
+function renderList(){
+  const list = document.getElementById("list");
+  const q = (document.getElementById("ticketSearch")?.value || "").toLowerCase();
+  const st = document.getElementById("statusFilter")?.value || "";
+  const sort = document.getElementById("sortTickets")?.value || "recent";
+  let rows = ticketsCache.filter(t =>
+    (!q || (t.code+" "+t.title+" "+(t.category||"")).toLowerCase().includes(q)) &&
+    (!st || t.status === st)
+  );
+  rows.sort((a,b)=>{
+    if(sort==="priority") return priorityWeight(a.priority)-priorityWeight(b.priority) || b.id-a.id;
+    if(sort==="sla") return slaWeight(a)-slaWeight(b) || priorityWeight(a.priority)-priorityWeight(b.priority);
+    return b.id-a.id;
+  });
+  document.getElementById("empty").style.display = rows.length? "none":"flex";
+  list.innerHTML = rows.map(t=>`
+    <div class="ticket-row" role="button" tabindex="0" onclick="openTicket(${t.id})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openTicket(${t.id})}">
+      <span class="code">${t.code}</span>
+      <div class="ti"><div class="t">${esc(t.title)}</div>
+        <div class="m">${esc(t.category||"")} · ${esc(t.status)}</div></div>
+      <span class="chip ${priClass(t.priority)}">${esc(t.priority||"")}</span>
+      <span class="chip status-${statusClass(t.status)}">${esc(t.status||"")}</span>
+      <span class="chip ${slaClass(ticketSla(t))}">${esc(ticketSla(t).label)}</span>
+    </div>`).join("");
+  revealChildren(list);
+}
+
+document.getElementById("btnCreate").onclick = async ()=>{
+  const err=document.getElementById("newErr"); err.textContent="";
+  const btn=document.getElementById("btnCreate"); setBusy(btn,true,"Criando chamado...");
+  try{
+    const t = await api("/api/tickets","POST",{
+      title:nt.value, description:nd.value, priority:np.value, channel:nc.value, frequency:nf.value
+    });
+    toast("Chamado criado.");
+    nt.value=nd.value=""; openTicket(t.id);
+  }catch(e){ err.textContent=e.message; toast(e.message,"err"); }
+  finally{ setBusy(btn,false); }
+};
+
+const STATUS_ORDER = ["Aberto","Em análise","Em atendimento","Aguardando cliente","Resolvido","Encerrado"];
+
+async function openTicket(id){
+  currentId = id;
+  const t = await api("/api/tickets/"+id);
+  vDet.classList.remove("hidden"); vList.classList.add("hidden"); vNew.classList.add("hidden");
+  revealView(vDet);
+  dTitle.textContent=t.title; dCode.textContent=t.code+" · aberto em "+fmt(t.created_at);
+  dPri.textContent=t.priority; dPri.className="chip "+priClass(t.priority);
+  dSla.textContent=ticketSla(t).label; dSla.className="chip "+slaClass(ticketSla(t));
+  dMeta.innerHTML = `
+    <div class="detail-item"><div class="k">Código</div><div class="v"><button class="btn-ghost btn-sm" onclick="copyText('${t.code}','Código copiado')">${esc(t.code)}</button></div></div>
+    <div class="detail-item"><div class="k">Status</div><div class="v"><span class="chip status-${statusClass(t.status)}">${esc(t.status)}</span></div></div>
+    <div class="detail-item"><div class="k">Categoria</div><div class="v">${esc(t.category||"A definir")}</div></div>
+    <div class="detail-item"><div class="k">Canal</div><div class="v">${esc(t.channel||"Não informado")}</div></div>`;
+  dSummary.textContent=t.ai_summary||"Sem resumo";
+  dStatus.textContent=t.status; dEta.textContent=t.eta||"a definir";
+  const tlEl = document.getElementById("timeline");
+  const RESOLVED = ["Resolvido","Encerrado"];
+  tlEl.className="tl-dash";
+  tlEl.innerHTML = t.events.map((e,i)=>{
+    const isLast = i===t.events.length-1;
+    let cls = "tl-dash-item";
+    if(e.kind==="system"||e.kind==="channel") cls+=" sys";
+    if(e.kind==="system"&&e.author==="Triagem") cls+=" triage-ev";
+    if(isLast && !RESOLVED.includes(t.status)) cls+=" current";
+    else if(!isLast || RESOLVED.includes(t.status)) cls+=" done";
+    const type = ({status:"Status", system:"Sistema", channel:"Canal", escalation:"Escalação", attachment:"Anexo", message:"Mensagem", internal:"Nota interna"})[e.kind] || e.kind;
+    return `<div class="${cls}">
+      <div class="tw">${fmt(e.created_at)} · ${esc(e.author)}</div>
+      <div class="tc"><span class="chip" style="margin-right:6px">${type}</span>${esc(e.content)}</div>
+    </div>`;
+  }).join("");
+  revealChildren(tlEl);
+  const ms = t.events.filter(e=>e.kind==="message");
+  const isClient = u => u==="Cliente";
+  msgs.innerHTML = ms.length? ms.map(m=>`
+    <div class="msg ${isClient(m.author)?'cliente':'from-tech'}">
+      <div class="who" style="font-size:11px;color:${isClient(m.author)?'var(--muted)':'var(--brand)'};margin-bottom:4px">${esc(m.author)}</div>
+      <div class="txt">${esc(m.content)}</div>
+    </div>`).join("") : '<div class="muted">Nenhuma mensagem ainda.</div>';
+  revealChildren(msgs);
+  if(RESOLVED.includes(t.status) && !tlEl.dataset.resolved){
+    tlEl.dataset.resolved="1";
+    if(window._lastStatus && window._lastStatus !== t.status){
+      setTimeout(()=>animatePatoResolve(), 300);
+    }
+  }
+  window._lastStatus = t.status;
+  loadAttachments();
+}
+
+async function loadAttachments(){
+  const box = document.getElementById("attList");
+  box.innerHTML = skeletonRows(1);
+  const as = await api(`/api/tickets/${currentId}/attachments`);
+  box.innerHTML = as.length ? as.map(a=>`
+    <div style="font-size:13px;margin-bottom:6px">
+      <button class="btn-ghost btn-sm" onclick="downloadUrl('/api/attachments/${a.id}', '${esc(a.filename)}')">${esc(a.filename)}</button>
+      <span class="muted" style="font-size:11px"> · ${(a.size/1024).toFixed(0)} KB · ${esc(a.uploaded_by)}</span>
+    </div>`).join("") : '<div class="muted" style="font-size:13px">Nenhum anexo.</div>';
+}
+
+document.getElementById("btnUp").onclick = async ()=>{
+  const f = document.getElementById("fileIn").files[0];
+  if(!f){ return; }
+  const fd = new FormData(); fd.append("file", f);
+  const res = await fetch(`/api/tickets/${currentId}/attachments`, {
+    method:"POST", headers:{ "Authorization":"Bearer "+token() }, body: fd
+  });
+  if(res.ok){ toast("Anexo enviado."); document.getElementById("fileIn").value=""; openTicket(currentId); }
+  else {
+    const data = await res.json().catch(()=>({}));
+    toast(data.detail || "Falha no upload.", "err");
+  }
+};
+
+document.getElementById("btnClose").onclick = async ()=>{
+  if(!confirm("Encerrar este chamado?")) return;
+  await api(`/api/tickets/${currentId}/close`,"POST",{});
+  toast("Chamado encerrado.");
+  openTicket(currentId);
+};
+setInterval(()=>{ if(currentId && !vDet.classList.contains("hidden")){ refreshDetailQuiet(); } }, 8000);
+async function refreshDetailQuiet(){
+  try{
+    const t = await api("/api/tickets/"+currentId);
+    const ms = t.events.filter(e=>e.kind==="message");
+    const cur = document.getElementById("msgs").innerHTML;
+    const novo = ms.length? ms.map(m=>`<div class="msg ${m.author==='Cliente'?'cliente':'from-tech'}"><div class="who">${esc(m.author)}</div><div class="txt">${esc(m.content)}</div></div>`).join("") : '<div class="muted">Nenhuma mensagem ainda.</div>';
+    if(novo !== cur){ openTicket(currentId); }
+    document.getElementById("dStatus").textContent = t.status;
+  }catch(e){}
+}
+
+document.getElementById("btnSend").onclick = async ()=>{
+  if(!msgInput.value.trim()) return;
+  const btn=document.getElementById("btnSend"); setBusy(btn,true,"Enviando...");
+  try{
+    await api(`/api/tickets/${currentId}/message`,"POST",{content:msgInput.value});
+    msgInput.value=""; toast("Mensagem enviada."); openTicket(currentId);
+  } catch(e){ toast(e.message,"err"); } finally { setBusy(btn,false); }
+};
+
+function esc(s){ return (s||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+function fmt(iso){ try{ return new Date(iso+"Z").toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}); }catch{ return iso; } }
+
+let kbTimer;
+async function suggestKB(){
+  clearTimeout(kbTimer);
+  const q=(nt.value+" "+nd.value).trim();
+  const box=document.getElementById("kbSuggest");
+  if(q.length<15){ box.style.display="none"; return; }
+  kbTimer=setTimeout(async()=>{
+    try{
+      const r=await api("/api/kb/suggest","POST",{query:q});
+      if(r.suggestions&&r.suggestions.length){
+        document.getElementById("kbSuggestList").innerHTML=
+          r.suggestions.map(a=>`<div style="margin-top:6px"><a href="faq.html" target="_blank">${esc(a.title)}</a> <span style="font-size:11px;color:var(--muted)">[${esc(a.category)}]</span></div>`).join("");
+        box.style.display="";
+      }else{ box.style.display="none"; }
+    }catch(e){ box.style.display="none"; }
+  },600);
+}
+
+showList();
+</script>
+</body>
+</html>

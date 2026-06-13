@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>pato.do.problema · Entrar</title>
+<link rel="stylesheet" href="style.css?v=20260612b">
+<style>
+  .login-wrap{ min-height:100dvh; display:flex; align-items:center; justify-content:center; padding:56px 20px 16px; overflow:hidden; }
+  .login-form{ width:100%; max-width:392px; text-align:center; }
+  .seal{ width:44px; height:44px; margin:0 auto 12px; }
+  .seal canvas{ width:100%; height:100%; display:block; }
+  .seal.auth-error{ animation:patoAuthError 360ms var(--ease-ui) both; }
+  @keyframes patoAuthError{ 0%,100%{ transform:translateX(0); } 20%{ transform:translateX(-4px) rotate(-2deg); } 45%{ transform:translateX(4px) rotate(2deg); } 70%{ transform:translateX(-2px) rotate(-1deg); } }
+  .editorial{ font-size:24px; font-weight:500; letter-spacing:0; line-height:1.05; margin-bottom:6px; }
+  .sub{ color:var(--muted); font-size:14px; margin-bottom:16px; }
+  .tabs{ display:flex; gap:8px; margin-bottom:12px; padding:3px; background:var(--soft); }
+  .tab{ flex:1; min-height:38px; padding:9px 12px; text-align:center; font-family:inherit; font-size:13px; border:1px solid var(--soft); background:none; color:var(--muted); cursor:pointer; transition:border-color var(--dur-med) var(--ease-ui), color var(--dur-med) var(--ease-ui), background var(--dur-med) var(--ease-ui), transform var(--dur-fast) var(--ease-ui); }
+  .tab:hover{ color:var(--text); background:var(--hover); }
+  .tab.on{ border-color:var(--brand); color:var(--surface); background:var(--brand); font-weight:700; }
+  .demo-hint{ font-size:12px; color:var(--muted); margin-top:5.25px; line-height:1.5; }
+  .login-form .field{ text-align:left; }
+  .login-form .field{ margin-bottom:14px; }
+  .login-form .in{ padding:10px 12px; }
+  .login-form .mb{ margin-bottom:10px; }
+  @media(max-width:520px){
+    .login-wrap{ padding:42px 20px 8px; }
+    .seal{ width:36px; height:36px; margin-bottom:8px; }
+    .editorial{ font-size:21px; margin-bottom:4px; }
+    .sub{ font-size:13px; margin-bottom:10px; }
+    .tabs{ margin-bottom:8px; }
+    .tab{ min-height:44px; padding:8px 10px; }
+    .login-form .field{ margin-bottom:10px; }
+    .login-form .mb{ margin-bottom:6px; }
+    .login-form .in{ min-height:44px; padding:9px 12px; }
+    .login-form .btn{ min-height:44px; padding:10px 18px; }
+  }
+</style>
+</head>
+<body>
+<div class="brand login-brand">pato<b>.do.</b>problema</div>
+<div class="login-wrap">
+  <main class="login-form">
+    <div class="seal"><canvas id="patoArt" width="260" height="260" aria-hidden="true"></canvas></div>
+    <div class="editorial">Abra um chamado antes que vire um pato.</div>
+    <div class="sub">Gestão de chamados com rastreabilidade.</div>
+
+    <div class="tabs">
+      <button class="tab on" type="button" id="tabLogin">Entrar</button>
+      <button class="tab" type="button" id="tabReg">Criar conta</button>
+    </div>
+
+    <div id="formLogin">
+      <div class="field"><label class="fl">E-mail</label><input class="in" type="email" id="le" autocomplete="email"></div>
+      <div class="field"><label class="fl">Senha</label><input class="in" type="password" id="lp" autocomplete="current-password"></div>
+      <button class="btn" style="width:100%" id="btnLogin">Entrar</button>
+      <p class="muted mt" style="font-size:12px"><a href="#" id="forgotLink">Esqueci minha senha</a></p>
+    </div>
+
+    <div id="formReg" class="hidden">
+      <div class="field"><label class="fl">Nome</label><input class="in" id="rn" autocomplete="name"></div>
+      <div class="field"><label class="fl">E-mail</label><input class="in" type="email" id="re" autocomplete="email"></div>
+      <div class="field"><label class="fl">Senha</label><input class="in" type="password" id="rp" autocomplete="new-password"></div>
+      <p class="muted mb" style="font-size:12px">Novas contas criadas pela tela pública entram como cliente. Contas técnicas ficam nos dados de demonstração ou devem ser criadas pelo ambiente administrativo.</p>
+      <button class="btn" style="width:100%" id="btnReg">Criar conta cliente</button>
+    </div>
+
+    <div class="err" id="err"></div>
+    <div class="demo-hint">
+      Contas de teste: cliente@demo.com · n1@demo.com · n2@demo.com · n3@demo.com (senha: 1234)
+    </div>
+  </main>
+</div>
+
+<script src="pato.js?v=20260612d"></script>
+<script src="api.js"></script>
+<script>
+  drawPatoSolid(document.getElementById("patoArt"));
+  window.addEventListener("load",()=>startPatoPageLoader({duration:820}));
+
+
+  const tabLogin=document.getElementById("tabLogin"), tabReg=document.getElementById("tabReg");
+  const fLogin=document.getElementById("formLogin"), fReg=document.getElementById("formReg");
+  const err=document.getElementById("err");
+  const seal=document.querySelector(".seal");
+  function signalAuthError(){
+    seal.classList.remove("auth-error");
+    void seal.offsetWidth;
+    seal.classList.add("auth-error");
+  }
+  tabLogin.onclick=()=>{ tabLogin.classList.add("on"); tabReg.classList.remove("on"); fLogin.classList.remove("hidden"); fReg.classList.add("hidden"); err.textContent=""; revealView(fLogin); };
+  tabReg.onclick=()=>{ tabReg.classList.add("on"); tabLogin.classList.remove("on"); fReg.classList.remove("hidden"); fLogin.classList.add("hidden"); err.textContent=""; revealView(fReg); };
+
+  function go(){
+    const r = role();
+    location.href = (r === "cliente") ? "cliente.html" : "painel.html";
+  }
+
+  document.getElementById("btnLogin").onclick = async ()=>{
+    err.textContent="";
+    setBusy(btnLogin,true,"Entrando...");
+    try{
+      const d = await api("/api/login","POST",{ email:le.value, password:lp.value });
+      setSession(d.token, d.role, d.name); go();
+    }catch(e){ err.textContent = e.message; signalAuthError(); }
+    finally{ setBusy(btnLogin,false); }
+  };
+  document.getElementById("btnReg").onclick = async ()=>{
+    err.textContent="";
+    setBusy(btnReg,true,"Criando...");
+    try{
+      const d = await api("/api/register","POST",{ name:rn.value, email:re.value, password:rp.value, role:"cliente" });
+      setSession(d.token, d.role, d.name); go();
+    }catch(e){ err.textContent = e.message; signalAuthError(); }
+    finally{ setBusy(btnReg,false); }
+  };
+  document.addEventListener("keydown", e=>{ if(e.key==="Enter"){ if(!fLogin.classList.contains("hidden")) btnLogin.click(); else btnReg.click(); }});
+
+  document.getElementById("forgotLink").onclick = async (ev)=>{
+    ev.preventDefault();
+    const email = prompt("Digite seu e-mail para recuperação:");
+    if(!email) return;
+    try{
+      const r = await api("/api/forgot","POST",{ email });
+      if(r.dev_token){
+        if(confirm("Modo local sem SMTP. Abrir a redefinição de senha agora?")){
+          location.href = "redefinir.html?token=" + encodeURIComponent(r.dev_token);
+        }
+      } else {
+        alert(r.msg || "Se o e-mail existir, enviaremos instruções.");
+      }
+    }catch(e){ err.textContent = e.message; }
+  };
+</script>
+</body>
+</html>

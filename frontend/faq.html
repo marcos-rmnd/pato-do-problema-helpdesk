@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>pato.do.problema · Base de Conhecimento</title>
+<link rel="stylesheet" href="style.css?v=20260612b">
+<style>
+.kb-hero{ text-align:center; padding:34px 0 30px; }
+.kb-hero .seal{ width:50px;height:50px;margin:0 auto 18px; opacity:1; }
+.kb-hero .seal canvas{ width:100%;height:100%;display:block; }
+.kb-hero h1{ font-size:clamp(26px,4vw,40px); font-weight:500; letter-spacing:0; margin-bottom:8px; }
+.kb-hero .sub{ font-size:15px; color:var(--muted); max-width:520px; margin:0 auto; line-height:1.65; }
+
+.kb-search-wrap{ max-width:640px; margin:24px auto 16px; position:relative; }
+.kb-search-wrap input{
+  width:100%; padding:14px 20px; font-family:inherit; font-size:16px;
+  color:var(--text); background:var(--surface); border:1px solid var(--border); outline:none;
+  transition:border-color .2s;
+}
+.kb-search-wrap input:focus{ border-color:var(--brand); outline:2px solid var(--brand); outline-offset:1px; }
+.kb-search-wrap input::placeholder{ color:var(--muted); }
+
+.cat-filters{ display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin:0 auto 30px; max-width:680px; }
+.cat-btn{
+  min-height:34px; min-width:86px; font-family:inherit; font-size:12px; letter-spacing:.03em;
+  padding:7px 14px; border:1px solid var(--soft); background:var(--soft); color:var(--muted);
+  cursor:pointer; transition:border-color var(--dur-med) var(--ease-ui), color var(--dur-med) var(--ease-ui), background var(--dur-med) var(--ease-ui), transform var(--dur-fast) var(--ease-ui);
+}
+.cat-btn:hover{ border-color:var(--border); color:var(--text); background:var(--hover); transform:translateY(-1px); }
+.cat-btn.active{ border-color:var(--brand); color:var(--surface); background:var(--brand); font-weight:700; }
+
+.kb-suggest{ border:1px solid var(--border); background:var(--soft); padding:18px 20px; margin-bottom:28px; display:none; }
+.kb-suggest .label{ font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--brand); margin-bottom:10px; }
+.suggest-item{ margin-top:8px; cursor:pointer; font-size:14px; }
+.suggest-item:hover{ color:var(--brand); }
+.suggest-item .cat{ font-size:11px; color:var(--muted); margin-left:8px; }
+
+.kb-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; }
+.kb-card{
+  min-height:126px; border:1px solid var(--border); background:var(--surface); padding:22px; cursor:pointer; position:relative; overflow:hidden;
+  transition:border-color var(--dur-med) var(--ease-ui), background var(--dur-med) var(--ease-ui), transform var(--dur-fast) var(--ease-ui);
+}
+.kb-card::after{ content:''; position:absolute; left:22px; right:22px; bottom:16px; height:2px; background:var(--brand); transform:scaleX(0); transform-origin:left; transition:transform var(--dur-med) var(--ease-out); }
+.kb-card:hover{ border-color:var(--border); background:var(--hover); transform:translateY(-2px); }
+.kb-card:hover::after{ transform:scaleX(1); }
+.kb-card h3{ font-size:16px; font-weight:500; margin-bottom:10px; line-height:1.35; }
+.kb-card .kb-meta{ font-size:12px; color:var(--muted); line-height:1.45; }
+.kb-card .kb-views{ font-size:12px; color:var(--brand); margin-top:10px; }
+
+.article-wrap{ max-width:680px; margin:0 auto; }
+.article-header{ margin-bottom:24px; }
+.article-header h2{ font-size:clamp(22px,3.5vw,34px); font-weight:500; letter-spacing:0; line-height:1.1; margin-bottom:10px; }
+.article-body{
+  font-size:15px; line-height:1.85; color:var(--muted);
+  white-space:pre-wrap; border-left:2px solid var(--border); padding-left:20px;
+}
+.tag-list{ display:flex; flex-wrap:wrap; gap:6px; margin:14px 0; }
+.tag{ font-size:11px; letter-spacing:.04em; padding:4px 9px; border:1px solid var(--border); color:var(--muted); background:var(--soft); }
+.not-found-box{ border:1px solid var(--border); padding:22px; text-align:center; margin-top:28px; }
+.not-found-box p{ font-size:14px; color:var(--muted); margin-bottom:14px; }
+
+.section-label{ font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin-bottom:14px; }
+
+.manage-bar{ display:flex; align-items:center; gap:12px; max-width:760px; margin:0 auto 20px; padding:14px 16px; background:var(--surface); border:1px solid var(--border); }
+.manage-bar .manage-label{ font-size:12px; color:var(--muted); letter-spacing:.06em; flex:1; }
+
+.editor-overlay{
+  position:fixed; inset:0; z-index:500; background:color-mix(in srgb, var(--text) 42%, var(--bg));
+  backdrop-filter:blur(8px); display:flex; align-items:center; justify-content:center; padding:20px;
+}
+.editor-box{ background:var(--surface); border:2px solid var(--border); padding:32px; width:100%; max-width:600px; position:relative; max-height:90vh; overflow-y:auto; }
+.editor-overlay:not(.hidden) .editor-box{ animation:surfaceIn var(--dur-slow) var(--ease-out) both; }
+
+@media(max-width:600px){
+  .kb-hero{ padding:28px 0 20px; }
+  .kb-grid{ grid-template-columns:1fr; }
+  .cat-filters{ justify-content:flex-start; gap:6px; }
+  .cat-btn{ flex:1 1 calc(50% - 6px); min-width:0; font-size:12px; padding:7px 10px; }
+  .article-body{ padding-left:14px; }
+  .editor-box{ padding:22px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand">pato<b>.do.</b>problema</div>
+    <div class="user-box" id="topUser">
+      <a href="cliente.html" class="btn-ghost btn-sm" id="linkChamados">Meus chamados</a>
+      <a href="painel.html" class="btn-ghost btn-sm hidden" id="linkPainel">Painel técnico</a>
+      <button class="btn-ghost" onclick="logout()">Sair</button>
+    </div>
+  </div>
+
+  <div class="kb-hero">
+    <div class="seal"><canvas id="heroSeal" width="260" height="260" aria-hidden="true"></canvas></div>
+    <h1>Base de Conhecimento</h1>
+    <p class="sub">Consulte orientacoes simples antes de abrir um chamado.</p>
+  </div>
+
+  <div class="manage-bar hidden" id="manageBar">
+    <span class="manage-label">Você é técnico · gerencie os artigos direto aqui.</span>
+    <button class="btn btn-sm" onclick="openEditor(null)">Novo artigo</button>
+  </div>
+
+  <div class="kb-search-wrap">
+    <input id="search" placeholder="Descreva seu problema ou busque um artigo..." oninput="onSearch()">
+  </div>
+
+  <div class="cat-filters" id="catFilters">
+    <button class="cat-btn active" data-cat="" onclick="selectCat(this)">Todos</button>
+  </div>
+
+  <div class="kb-suggest" id="articleSuggest">
+    <div class="label">Artigos relacionados ao problema</div>
+    <div id="articleSuggestList"></div>
+  </div>
+
+  <div id="viewList">
+    <div class="section-label" id="sectionLabel">Mais acessados</div>
+    <div class="kb-grid" id="kbGrid"></div>
+    <div class="empty-state muted hidden" id="kbEmpty"><canvas class="empty-pato" id="emptyPatoKB" width="260" height="260" aria-hidden="true"></canvas><span>Nenhum artigo encontrado.</span></div>
+  </div>
+
+  <div id="viewDetail" class="hidden">
+    <button class="btn-ghost btn-sm mb" onclick="backToList()">Voltar</button>
+    <div class="panel article-wrap" id="articlePanel">
+      <div class="article-header">
+        <h2 id="artTitle"></h2>
+        <div class="muted" id="artMeta" style="font-size:12px;margin-bottom:10px"></div>
+        <div class="tag-list" id="artTags"></div>
+      </div>
+      <hr class="dash-sep">
+      <div class="article-body" id="artBody"></div>
+      <div class="not-found-box mt">
+        <p>Esse artigo não resolveu? Nossa equipe pode te ajudar.</p>
+        <a href="cliente.html" class="btn btn-sm">Abrir chamado</a>
+      </div>
+      <div class="hidden mt" id="artActions" style="display:flex;gap:8px">
+        <button class="btn btn-sm" id="btnEdit">Editar</button>
+        <button class="btn-ghost btn-sm" id="btnDel" style="color:var(--danger);border-color:var(--danger)">Apagar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="editor-overlay hidden" id="editorOverlay">
+  <div class="editor-box">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <h2 style="margin:0" id="edTitle">Novo artigo</h2>
+      <button class="btn-ghost btn-sm" onclick="closeEditor()">Fechar</button>
+    </div>
+    <div class="field"><label class="fl">Título</label><input class="in" id="eTitle"></div>
+    <div class="field"><label class="fl">Categoria</label>
+      <select class="in" id="eCat">
+        <option>Geral</option><option>Acesso</option><option>Rede</option>
+        <option>Hardware</option><option>Software</option><option>E-mail</option>
+        <option>Segurança</option><option>Impressora</option><option>Sistema</option>
+      </select>
+    </div>
+    <div class="field"><label class="fl">Tags (separadas por vírgula)</label><input class="in" id="eTags"></div>
+    <div class="field"><label class="fl">Conteúdo</label><textarea class="in" id="eContent" style="min-height:180px"></textarea></div>
+    <div style="display:flex;gap:10px">
+      <button class="btn" style="flex:1" onclick="saveArticle()">Salvar</button>
+      <button class="btn-ghost" onclick="closeEditor()">Cancelar</button>
+    </div>
+    <div class="err" id="edErr"></div>
+  </div>
+</div>
+
+<script src="pato.js?v=20260612d"></script>
+<script src="api.js"></script>
+<script>
+guard("auth");
+const myRole = role();
+document.getElementById("who") && (document.getElementById("who").textContent = uname());
+if(["N1","N2","N3"].includes(myRole)){
+  document.getElementById("linkChamados").classList.add("hidden");
+  document.getElementById("linkPainel").classList.remove("hidden");
+  document.getElementById("manageBar").classList.remove("hidden");
+}
+drawPatoSolid(document.getElementById("heroSeal"));
+drawPatoSolid(document.getElementById("emptyPatoKB"));
+
+
+let allArticles=[], editingId=null, currentCat="", currentArticle=null;
+async function loadKB(q=""){
+  document.getElementById("kbGrid").innerHTML = skeletonRows(6);
+  const rows = await api("/api/kb"+(q?`?q=${encodeURIComponent(q)}`:""));
+  allArticles = rows;
+  renderCats(rows);
+  renderGrid(rows);
+  document.getElementById("sectionLabel").textContent = q ? "Resultados" : "Mais acessados";
+}
+
+function renderCats(rows){
+  const cats = ["Todos",...new Set(rows.map(r=>r.category).filter(Boolean))];
+  const el = document.getElementById("catFilters");
+  el.innerHTML = cats.map((c,i)=>`
+    <button class="cat-btn${i===0&&!currentCat?' active':currentCat===c?' active':''}" data-cat="${c==='Todos'?'':c}" onclick="selectCat(this)">${c}</button>
+  `).join("");
+}
+
+function selectCat(btn){
+  document.querySelectorAll(".cat-btn").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+  currentCat = btn.dataset.cat;
+  const filtered = currentCat ? allArticles.filter(a=>a.category===currentCat) : allArticles;
+  renderGrid(filtered);
+}
+
+function renderGrid(rows){
+  const grid = document.getElementById("kbGrid");
+  const empty = document.getElementById("kbEmpty");
+  grid.classList.remove("hidden"); empty.classList.add("hidden");
+  if(!rows.length){ grid.classList.add("hidden"); empty.classList.remove("hidden"); return; }
+  grid.innerHTML = rows.map(a=>`
+    <div class="kb-card" role="button" tabindex="0" onclick="openArticle(${a.id})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openArticle(${a.id})}">
+      <h3>${esc(a.title)}</h3>
+      <div class="kb-meta">${esc(a.category)}${a.tags?` · ${esc(a.tags)}`:"" }</div>
+      <div class="kb-views">${a.views} visualizações</div>
+    </div>`).join("");
+  revealChildren(grid);
+}
+async function openArticle(id){
+  const a = await api("/api/kb/"+id);
+  currentArticle = a;
+  document.getElementById("viewList").classList.add("hidden");
+  document.getElementById("viewDetail").classList.remove("hidden");
+  revealView(document.getElementById("viewDetail"));
+  document.getElementById("artTitle").textContent = a.title;
+  document.getElementById("artMeta").textContent = `${a.category} · por ${a.author} · ${a.views} visualizações`;
+  document.getElementById("artTags").innerHTML =
+    (a.tags||"").split(",").filter(Boolean).map(t=>`<span class="tag">${esc(t.trim())}</span>`).join("");
+  document.getElementById("artBody").textContent = a.content;
+  const actions = document.getElementById("artActions");
+  if(["N1","N2","N3"].includes(myRole)){
+    actions.style.display="flex"; actions.classList.remove("hidden");
+    document.getElementById("btnEdit").onclick = ()=>openEditor(a);
+    document.getElementById("btnDel").onclick = ()=>deleteArticle(a.id);
+  }
+
+}
+
+function backToList(){
+  document.getElementById("viewDetail").classList.add("hidden");
+  document.getElementById("viewList").classList.remove("hidden");
+  revealView(document.getElementById("viewList"));
+}
+let searchTimer;
+function onSearch(){
+  clearTimeout(searchTimer);
+  const q = document.getElementById("search").value.trim();
+  currentCat = "";
+  searchTimer = setTimeout(()=>{
+    loadKB(q);
+    if(q.length >= 12) suggestArticles(q);
+    else document.getElementById("articleSuggest").style.display="none";
+  }, 350);
+}
+
+async function suggestArticles(q){
+  try{
+    const r = await api("/api/kb/suggest","POST",{query:q});
+    const box = document.getElementById("articleSuggest");
+    const list = document.getElementById("articleSuggestList");
+    if(r.suggestions && r.suggestions.length){
+      list.innerHTML = r.suggestions.map(a=>`
+        <div class="suggest-item" onclick="openArticle(${a.id})">
+          ${esc(a.title)}<span class="cat">[${esc(a.category)}]</span>
+        </div>`).join("");
+      box.style.display="";
+    } else { box.style.display="none"; }
+  }catch(e){ document.getElementById("articleSuggest").style.display="none"; }
+}
+function openEditor(a){
+  editingId = a ? a.id : null;
+  document.getElementById("edTitle").textContent = a ? "Editar artigo" : "Novo artigo";
+  document.getElementById("eTitle").value   = a ? a.title   : "";
+  document.getElementById("eCat").value     = a ? a.category: "Geral";
+  document.getElementById("eTags").value    = a ? a.tags    : "";
+  document.getElementById("eContent").value = a ? a.content : "";
+  document.getElementById("edErr").textContent = "";
+  document.getElementById("editorOverlay").classList.remove("hidden");
+}
+function closeEditor(){ document.getElementById("editorOverlay").classList.add("hidden"); }
+
+async function saveArticle(){
+  const body={
+    title:   document.getElementById("eTitle").value.trim(),
+    content: document.getElementById("eContent").value.trim(),
+    category:document.getElementById("eCat").value,
+    tags:    document.getElementById("eTags").value.trim(),
+  };
+  const err=document.getElementById("edErr");
+  if(!body.title||!body.content){ err.textContent="Título e conteúdo são obrigatórios."; return; }
+  try{
+    if(editingId) await api("/api/kb/"+editingId,"PUT",body);
+    else          await api("/api/kb","POST",body);
+    closeEditor(); loadKB();
+    if(editingId) backToList();
+  }catch(e){ err.textContent=e.message; }
+}
+
+async function deleteArticle(id){
+  if(!confirm("Apagar este artigo permanentemente?")) return;
+  await api("/api/kb/"+id,"DELETE");
+  backToList(); loadKB();
+}
+
+function esc(s){ return (s||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+loadKB();
+</script>
+</body>
+</html>

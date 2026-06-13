@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>pato.do.problema · Painel técnico</title>
+<link rel="stylesheet" href="style.css?v=20260612b">
+<style>
+@media(max-width:900px){
+  #abaQueue .fila-layout{ grid-template-columns:1fr; }
+  #abaKB .grid2{ grid-template-columns:1fr; }
+  #detail{ order:2; }
+  #abaQueue .panel:first-child{ order:1; }
+}
+@media(max-width:600px){
+  .topbar .user-box{ gap:4px; }
+  #tabQueue, #tabKB{ font-size:11px; }
+  .metrics-dark{ padding:18px 14px; }
+  .manage-bar-tech{ flex-wrap:wrap; }
+  .editor-modal{ padding:14px; }
+  .editor-modal .editor-inner{ padding:20px 16px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand">pato<b>.do.</b>problema</div>
+    <div class="user-box">
+      <span id="who"></span>
+      <span class="badge-role" id="roleBadge"></span>
+      <button class="btn-ghost btn-sm nav-active" id="tabQueue" aria-current="page" onclick="showTab('queue')">Fila</button>
+      <button class="btn-ghost btn-sm" id="tabKB" onclick="showTab('kb')">Base de conhecimento</button>
+      <button class="btn-ghost btn-sm" onclick="openProfile()">Perfil</button>
+      <button class="btn-ghost btn-quiet" onclick="logout()">Sair</button>
+    </div>
+  </div>
+
+  <div id="abaQueue">
+  <div class="fila-layout">
+    <div class="panel">
+      <div class="row-between mb">
+        <div class="title-badge"><h2>Fila</h2><span id="lvlTag" class="chip lvl"></span></div>
+        <div class="action-strip" style="margin:0">
+          <button class="btn-ghost btn-sm" onclick="loadQueue()">Atualizar</button>
+          <button class="btn-ghost btn-sm" onclick="downloadUrl('/api/export/tickets.csv', 'chamados.csv')">Exportar CSV</button>
+        </div>
+      </div>
+      <div class="toolbar">
+        <input class="in" id="queueSearch" placeholder="Buscar chamado..." oninput="renderQueue()">
+        <select class="in compact" id="queueStatus" onchange="renderQueue()">
+          <option value="">Todos os status</option>
+          <option>Aberto</option><option>Em análise</option><option>Em atendimento</option>
+          <option>Aguardando cliente</option><option>Aguardando terceiro</option><option>Resolvido</option>
+        </select>
+        <select class="in compact" id="queueSort" onchange="renderQueue()">
+          <option value="priority">Prioridade</option>
+          <option value="sla">SLA</option>
+          <option value="recent">Mais recentes</option>
+        </select>
+      </div>
+      <div id="queue"></div>
+      <div class="empty-state muted" id="qEmpty" style="display:none"><canvas class="empty-pato" id="emptyPatoQueue" width="260" height="260" aria-hidden="true"></canvas><span>Nenhum chamado na fila deste nível.</span></div>
+    </div>
+
+    <div class="panel" id="detail">
+      <div class="empty-state muted"><canvas class="empty-pato" id="emptyPatoDetail" width="260" height="260" aria-hidden="true"></canvas><span>Selecione um chamado na fila para atender.</span></div>
+    </div>
+    <div class="metrics-dark metricas" id="metrics">
+      <h2 style="margin-bottom:20px;font-size:16px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)">Métricas da fila</h2>
+    <div class="metric-grid" id="metricsBody">
+      <div><div class="metric-num" id="mAbertos">0</div><div class="metric-lbl">Abertos</div></div>
+      <div><div class="metric-num" id="mResolvidos">0</div><div class="metric-lbl">Resolvidos</div></div>
+      <div><div class="metric-num" id="mTaxa">0%</div><div class="metric-lbl">Taxa resolução</div></div>
+      <div><div class="metric-num" id="mTempo">0h</div><div class="metric-lbl">Tempo médio</div></div>
+    </div>
+    <hr class="dash-sep" style="margin-top:20px">
+    <div id="mNiveis" style="font-size:12px;letter-spacing:.06em;color:var(--muted)"></div>
+    <div class="mini-metrics" id="miniMetrics"></div>
+  </div>
+
+  </div>
+  </div>
+
+  <div id="abaKB" style="display:none">
+    <div class="grid2">
+      <div class="panel">
+        <div class="row-between mb">
+          <h2 style="margin:0">Artigos</h2>
+          <button class="btn btn-sm" onclick="newArticle()">Novo artigo</button>
+        </div>
+        <input class="in mb" id="kbSearch" placeholder="Buscar..." oninput="loadKB()" style="width:100%">
+        <div id="kbList"></div>
+      </div>
+      <div class="panel" id="kbEditor">
+        <div class="empty-state muted"><canvas class="empty-pato" id="emptyPatoEditor" width="260" height="260" aria-hidden="true"></canvas><span>Selecione um artigo ou clique em "Novo artigo".</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="pato.js?v=20260612d"></script>
+<script src="api.js"></script>
+<script>
+guard("tech");
+const myRole = role();
+document.getElementById("who").textContent = uname();
+document.getElementById("roleBadge").textContent = "Suporte "+myRole;
+document.getElementById("lvlTag").textContent = myRole;
+["emptyPatoQueue","emptyPatoDetail","emptyPatoEditor"].forEach(id=>drawPatoSolid(document.getElementById(id)));
+let currentId=null;
+let queueCache=[];
+
+async function loadQueue(){
+  document.getElementById("queue").innerHTML = skeletonRows(4);
+  const q = await api("/api/queue");
+  queueCache = q;
+  renderQueue();
+}
+
+function priorityWeight(p){ return ({Crítica:0, Alta:1, Média:2, Baixa:3})[p] ?? 4; }
+function slaWeight(t){ return ({late:0, warn:1, ok:2})[ticketSla(t).state] ?? 3; }
+function renderQueue(){
+  const q = (document.getElementById("queueSearch")?.value || "").toLowerCase();
+  const st = document.getElementById("queueStatus")?.value || "";
+  const sort = document.getElementById("queueSort")?.value || "priority";
+  let rows = queueCache.filter(t =>
+    (!q || (t.code+" "+t.title+" "+(t.category||"")).toLowerCase().includes(q)) &&
+    (!st || t.status === st)
+  );
+  rows.sort((a,b)=>{
+    if(sort==="sla") return slaWeight(a)-slaWeight(b) || priorityWeight(a.priority)-priorityWeight(b.priority);
+    if(sort==="recent") return b.id-a.id;
+    return priorityWeight(a.priority)-priorityWeight(b.priority) || slaWeight(a)-slaWeight(b);
+  });
+  document.getElementById("qEmpty").style.display = rows.length?"none":"flex";
+  document.getElementById("queue").innerHTML = rows.map(t=>`
+    <div class="ticket-row" role="button" tabindex="0" onclick="open_(${t.id})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();open_(${t.id})}">
+      <span class="code">${t.code}</span>
+      <div class="ti"><div class="t">${esc(t.title)}</div>
+        <div class="m">${esc(t.category||"")} · ${esc(t.status)}</div></div>
+      <span class="chip ${priClass(t.priority)}">${esc(t.priority||"")}</span>
+      <span class="chip status-${statusClass(t.status)}">${esc(t.status||"")}</span>
+      <span class="chip ${slaClass(ticketSla(t))}">${esc(ticketSla(t).label)}</span>
+    </div>`).join("");
+  revealChildren(document.getElementById("queue"));
+}
+
+const NEXT = { N1:"N2", N2:"N3", N3:null };
+const STATUSES = ["Em atendimento","Aguardando cliente","Aguardando terceiro","Resolvido","Encerrado"];
+
+async function open_(id){
+  currentId=id;
+  const t = await api("/api/tickets/"+id);
+  const ms = t.events.filter(e=>e.kind==="message");
+  const det = document.getElementById("detail");
+  det.innerHTML = `
+    <div class="row-between">
+      <div><h2 style="margin:0">${esc(t.title)}</h2>
+        <div class="muted" style="font-size:12px;margin-top:4px">${t.code} · ${t.category} · ${esc(t.description)}</div></div>
+    </div>
+
+    <div class="assist-box mt">
+      <div class="label">Resumo do chamado</div>
+      <div class="body">${esc(t.ai_summary||"Sem resumo")}</div>
+    </div>
+
+    <div class="mt"><label class="fl">Mudar status</label>
+      <div class="row-between" style="gap:8px">
+        <select class="in" id="stSel">${STATUSES.map(s=>`<option ${s===t.status?"selected":""}>${s}</option>`).join("")}</select>
+        <button class="btn btn-sm" onclick="setStatus(this)">OK</button>
+      </div>
+    </div>
+
+    <div class="mt row-between" style="gap:8px">
+      <button class="btn btn-sm" style="flex:1" onclick="suggest()">Rascunhar resposta</button>
+      ${NEXT[myRole] ? `<button class="btn-ghost btn-sm" style="flex:1" onclick="escalate()">Escalar para ${NEXT[myRole]}</button>` : ""}
+    </div>
+    <div id="sugBox"></div>
+
+    <h2 class="mt">Conversa</h2>
+    <div id="tMsgs">${ ms.length? ms.map(m=>`<div class="msg ${m.author==='Cliente'?'cliente':''}"><div class="who">${m.author}</div><div class="txt">${esc(m.content)}</div></div>`).join("") : '<div class="muted">Sem mensagens</div>' }</div>
+    <div class="field mt"><textarea class="in" id="tReply" placeholder="Responder ao cliente..."></textarea></div>
+    <div class="row-between" style="gap:8px">
+      <button class="btn btn-sm" style="flex:1" onclick="reply()">Enviar resposta</button>
+      <button class="btn-ghost btn-sm" style="flex:1" onclick="humanizeReply()">Adaptar linguagem</button>
+    </div>
+  `;
+  det.insertAdjacentHTML("afterbegin", `
+    <div class="detail-grid mb">
+      <div class="detail-item"><div class="k">Código</div><div class="v"><button class="btn-ghost btn-sm" onclick="copyText('${t.code}','Código copiado')">${esc(t.code)}</button></div></div>
+      <div class="detail-item"><div class="k">Cliente</div><div class="v">${esc(t.client?.name||"Cliente")}</div></div>
+      <div class="detail-item"><div class="k">Status/SLA</div><div class="v"><span class="chip status-${statusClass(t.status)}">${esc(t.status||"")}</span> <span class="chip ${slaClass(ticketSla(t))}">${esc(ticketSla(t).label)}</span></div></div>
+      <div class="detail-item"><div class="k">Canal</div><div class="v">${esc(t.channel||"Não informado")}</div></div>
+    </div>`);
+  det.insertAdjacentHTML("beforeend", `
+    <div class="btn-grid-2col">
+      <button class="btn-ghost btn-sm" onclick="quickStatus('Em atendimento')">Em atendimento</button>
+      <button class="btn-ghost btn-sm" onclick="quickStatus('Aguardando cliente')">Aguardar cliente</button>
+      <button class="btn-ghost btn-sm" onclick="quickStatus('Resolvido')">Resolver</button>
+      <button class="btn-ghost btn-sm" onclick="useTemplate('Olá! Recebemos seu chamado e já estamos analisando o caso. Avisaremos por aqui assim que houver uma atualização.')">Recebido</button>
+      <button class="btn-ghost btn-sm" onclick="useTemplate('Precisamos de uma informação adicional para continuar: você pode nos enviar mais detalhes ou um print do erro?')">Pedir detalhe</button>
+      <button class="btn-ghost btn-sm" onclick="useTemplate('Aplicamos o ajuste necessário. Você pode validar se o problema foi resolvido?')">Validar solução</button>
+    </div>
+    <div id="internalMsgs" class="mt">${ t.events.filter(e=>e.kind==="internal").map(n=>`<div class="msg internal"><div class="who">${esc(n.author)} · nota interna</div><div class="txt">${esc(n.content)}</div></div>`).join("") }</div>
+    <div class="field mt"><label class="fl">Nota interna</label><textarea class="in" id="internalNote" placeholder="Visível apenas para o suporte..."></textarea></div>
+    <button class="btn-ghost btn-sm" onclick="saveInternal()">Salvar nota interna</button>`);
+  revealView(det);
+  revealChildren(document.getElementById("tMsgs"));
+}
+
+async function setStatus(btn){
+  setBusy(btn,true,"OK");
+  const st = document.getElementById("stSel").value;
+  try{
+    await api(`/api/tickets/${currentId}/status`,"POST",{status:st});
+    toast("Status atualizado.");
+    if(st==="Resolvido"||st==="Encerrado"){
+      animatePatoResolve(()=>{ open_(currentId); loadQueue(); loadMetrics(); });
+    } else {
+      flashElement(document.getElementById("detail")); open_(currentId); loadQueue();
+    }
+  } catch(e){ toast(e.message,"err"); } finally { setBusy(btn,false); }
+}
+async function quickStatus(st){
+  await api(`/api/tickets/${currentId}/status`,"POST",{status:st});
+  toast("Status alterado para "+st+".");
+  if(st==="Resolvido") animatePatoResolve(()=>{ open_(currentId); loadQueue(); loadMetrics(); });
+  else { open_(currentId); loadQueue(); loadMetrics(); }
+}
+async function escalate(){
+  if(!confirm(`Confirma que deseja escalar este chamado para o ${NEXT[myRole]}?`)) return;
+  const r = await api(`/api/tickets/${currentId}/escalate`,"POST",{level:NEXT[myRole]});
+  toast("Chamado escalado para "+NEXT[myRole]+".");
+  loadQueue();
+  document.getElementById("detail").innerHTML='<div class="muted">Chamado escalado para outro nível.</div>';
+}
+async function suggest(){
+  const box=document.getElementById("sugBox");
+  box.innerHTML='<div class="assist-box mt"><div class="label">Preparando rascunho...</div></div>';
+  revealView(box);
+  const r = await api(`/api/tickets/${currentId}/suggest`,"POST",{});
+  box.innerHTML=`<div class="assist-box mt"><div class="label">Rascunho sugerido (clique para usar)</div>
+    <div class="body" style="cursor:pointer" onclick="document.getElementById('tReply').value=this.textContent">${esc(r.suggestion)}</div></div>`;
+  revealView(box);
+}
+async function reply(){
+  const v=document.getElementById("tReply").value.trim(); if(!v) return;
+  await api(`/api/tickets/${currentId}/message`,"POST",{content:v});
+  toast("Resposta enviada.");
+  open_(currentId);
+}
+
+function useTemplate(text){
+  const ta=document.getElementById("tReply");
+  ta.value = text;
+  ta.focus();
+}
+
+async function saveInternal(){
+  const ta=document.getElementById("internalNote");
+  const v=ta.value.trim(); if(!v) return;
+  await api(`/api/tickets/${currentId}/internal`,"POST",{content:v});
+  toast("Nota interna registrada.");
+  open_(currentId);
+}
+
+async function humanizeReply(){
+  const ta=document.getElementById("tReply"); const v=ta.value.trim();
+  if(!v){ toast("Escreva algo técnico primeiro.","err"); return; }
+  try{
+    const r = await api("/api/humanize","POST",{text:v});
+    if(r.text && r.text !== v){
+      ta.value = r.text;
+      toast("Linguagem adaptada.");
+    } else {
+      toast("Não foi possível adaptar o texto. Tente reformular.","err");
+    }
+  }catch(e){ toast(e.message || "Erro ao adaptar linguagem.","err"); }
+}
+
+function esc(s){ return (s||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+
+function showTab(t){
+  document.getElementById("abaQueue").style.display = t==="queue"?"":"none";
+  document.getElementById("abaKB").style.display   = t==="kb"?"":"none";
+  document.getElementById("tabQueue").classList.toggle("nav-active", t==="queue");
+  document.getElementById("tabKB").classList.toggle("nav-active", t==="kb");
+  document.getElementById("tabQueue").toggleAttribute("aria-current", t==="queue");
+  document.getElementById("tabKB").toggleAttribute("aria-current", t==="kb");
+  revealView(document.getElementById(t==="queue"?"abaQueue":"abaKB"));
+  if(t==="kb") loadKB();
+}
+
+let editingId = null;
+
+async function loadKB(){
+  const q = document.getElementById("kbSearch").value.trim();
+  document.getElementById("kbList").innerHTML = skeletonRows(4);
+  const rows = await api("/api/kb"+(q?`?q=${encodeURIComponent(q)}`:""));
+  document.getElementById("kbList").innerHTML = rows.length
+    ? rows.map(a=>`<div class="ticket-row" role="button" tabindex="0" onclick="editArticle(${a.id})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();editArticle(${a.id})}">
+        <div class="ti"><div class="t">${esc(a.title)}</div>
+          <div class="m">${esc(a.category)} · ${a.views} views</div></div>
+        <button class="btn-ghost btn-sm" onclick="event.stopPropagation();deleteArticle(${a.id})">Apagar</button>
+      </div>`).join("")
+    : '<div class="empty-state muted"><canvas class="empty-pato" id="emptyPatoTechKB" width="260" height="260" aria-hidden="true"></canvas><span>Nenhum artigo.</span></div>';
+  if(document.getElementById("emptyPatoTechKB")) drawPatoSolid(document.getElementById("emptyPatoTechKB"));
+  revealChildren(document.getElementById("kbList"));
+}
+
+function kbEditorHTML(a){
+  return `
+    <h2 style="margin-bottom:16px">${a ? "Editar artigo" : "Novo artigo"}</h2>
+    <div class="field"><label class="fl">Título</label><input class="in" id="eTitle" value="${esc(a?.title||"")}"></div>
+    <div class="field"><label class="fl">Categoria</label><input class="in" id="eCat" value="${esc(a?.category||"Geral")}"></div>
+    <div class="field"><label class="fl">Tags (separadas por vírgula)</label><input class="in" id="eTags" value="${esc(a?.tags||"")}"></div>
+    <div class="field"><label class="fl">Conteúdo</label><textarea class="in" id="eContent" style="min-height:200px">${esc(a?.content||"")}</textarea></div>
+    <div class="row-between" style="gap:8px">
+      <button class="btn btn-sm" style="flex:1" onclick="saveArticle()">Salvar</button>
+      <button class="btn-ghost btn-sm" onclick="kbCancel()">Cancelar</button>
+    </div>`;
+}
+
+function newArticle(){ editingId=null; document.getElementById("kbEditor").innerHTML=kbEditorHTML(null); revealView(document.getElementById("kbEditor")); }
+
+async function editArticle(id){
+  editingId=id;
+  const a = await api("/api/kb/"+id);
+  document.getElementById("kbEditor").innerHTML=kbEditorHTML(a);
+  revealView(document.getElementById("kbEditor"));
+}
+
+async function saveArticle(){
+  const body={
+    title:document.getElementById("eTitle").value,
+    content:document.getElementById("eContent").value,
+    category:document.getElementById("eCat").value,
+    tags:document.getElementById("eTags").value,
+  };
+  if(editingId){ await api("/api/kb/"+editingId,"PUT",body); }
+  else { await api("/api/kb","POST",body); }
+  kbCancel(); loadKB();
+}
+
+async function deleteArticle(id){
+  if(!confirm("Apagar este artigo?")) return;
+  await api("/api/kb/"+id,"DELETE");
+  loadKB();
+  document.getElementById("kbEditor").innerHTML='<div class="muted">Selecione um artigo.</div>';
+}
+
+function kbCancel(){
+  editingId=null;
+  document.getElementById("kbEditor").innerHTML='<div class="muted">Selecione um artigo ou clique em "Novo artigo".</div>';
+  revealView(document.getElementById("kbEditor"));
+}
+
+async function loadMetrics(){
+  try{
+    const m = await api("/api/metrics");
+    animateCount(document.getElementById("mAbertos"),    m.abertos,    '');
+    animateCount(document.getElementById("mResolvidos"), m.resolvidos, '');
+    animateCount(document.getElementById("mTaxa"),       m.taxa_resolucao, '%');
+    animateCount(document.getElementById("mTempo"),      m.tempo_medio_resolucao_h, 'h');
+    document.getElementById("mNiveis").textContent =
+      `N1 · ${m.por_nivel.N1} chamados · N2 · ${m.por_nivel.N2} chamados · N3 · ${m.por_nivel.N3} chamados`;
+    document.getElementById("miniMetrics").innerHTML = `
+      <div class="mini-metric"><div class="n">${m.criados_hoje}</div><div class="l">Criados hoje</div></div>
+      <div class="mini-metric"><div class="n">${m.criticos}</div><div class="l">Críticos</div></div>
+      <div class="mini-metric"><div class="n">${m.atrasados}</div><div class="l">SLA atrasado</div></div>
+      <div class="mini-metric"><div class="n">${m.aguardando_cliente}</div><div class="l">Aguardando cliente</div></div>`;
+  }catch(e){ }
+}
+
+loadMetrics();
+loadQueue();
+setInterval(()=>{ loadQueue(); loadMetrics(); }, 10000);
+</script>
+</body>
+</html>

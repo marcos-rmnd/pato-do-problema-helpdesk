@@ -1,0 +1,62 @@
+# Segredos e variáveis locais
+.env
+.env.*
+!.env.example
+backend/.env
+
+# Bancos e dumps locais
+*.db
+*.sqlite
+*.sqlite3
+*.dump
+*.sql
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+venv/
+.venv/
+env/
+ENV/
+
+# Artefatos de navegador/teste manual
+.shot-*/
+playwright-report/
+test-results/
+
+# Arquivos temporários e logs
+*.log
+*.tmp
+*.bak
+*.old
+*.swp
+*.swo
+tmp/
+temp/
+.cache/
+
+# Dependências e builds locais
+node_modules/
+dist/
+build/
+
+# Sistema operacional / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+.claude/
+*.zip
+
+# Configurações compartilháveis do PyCharm
+!.run/
+!.run/*.run.xml
