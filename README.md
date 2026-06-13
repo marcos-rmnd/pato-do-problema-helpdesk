@@ -8,11 +8,11 @@ Não é SaaS. É uma demo funcional com backend organizado, frontend sem framewo
 
 ![Animacao de entrada](screenshots/loading-animation.gif)
 
-## Demonstração
+## Demo
 
-Status atual: funcional para demonstração local.
+**[https://pato-do-problema-helpdesk.onrender.com](https://pato-do-problema-helpdesk.onrender.com)**
 
-Contas de teste na secao [Contas demo](#contas-demo).
+Contas de teste na secao [Contas demo](#contas-demo). O primeiro acesso pode demorar ~30s (plano gratuito do Render hiberna o servico quando inativo).
 
 ## Screenshots
 
