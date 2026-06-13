@@ -12,7 +12,7 @@ Não é SaaS. É uma demo funcional com backend organizado, frontend sem framewo
 
 **[https://pato-do-problema-helpdesk.onrender.com](https://pato-do-problema-helpdesk.onrender.com)**
 
-Contas de teste na secao [Contas demo](#contas-demo). O primeiro acesso pode demorar ~30s (plano gratuito do Render hiberna o servico quando inativo).
+Contas de teste na secao [Contas demo](#contas-demo). O primeiro acesso pode demorar 30s (plano gratuito do Render hiberna o servico quando inativo).
 
 ## Screenshots
 
