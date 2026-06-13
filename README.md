@@ -198,19 +198,6 @@ Sem a chave, esses botoes retornam erro. Para configurar:
 ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-## Deploy
-
-`Dockerfile` + `render.yaml` prontos para o Render. Antes de publicar, revise:
-
-- `ALLOWED_ORIGINS`, para apontar para a URL real do deploy;
-- `JWT_SECRET`, para usar um valor forte;
-- `ALLOW_DEV_RESET_TOKEN=false`, para não retornar token de teste;
-- `SEED_DEMO=false`, se o deploy não for uma demonstração pública com contas demo;
-- `DATABASE_URL`, se quiser persistência fora do SQLite local;
-- SMTP, se quiser envio real de e-mail.
-
-Sem `DATABASE_URL`, usa SQLite (ok pra demo, nao pra producao).
-
 ## Limitações
 
 - Sem painel admin (tecnicos vem do seed)
@@ -219,7 +206,7 @@ Sem `DATABASE_URL`, usa SQLite (ok pra demo, nao pra producao).
 - Sem SMTP, reset de senha devolve `dev_token` em dev
 - Permissões cobrem o fluxo principal, não mais que isso
 
-## TODO
+## To-Do
 
 - Painel admin para criar tecnicos
 - Mover anexos para storage externo
