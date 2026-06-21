@@ -21,11 +21,11 @@ Test accounts in the [Demo accounts](#demo-accounts) section. First access may t
 | Screen | Screenshot |
 |--------|-----------|
 | Login | ![Login desktop](screenshots/login-desktop.png) |
-| Create account | ![Create account desktop](screenshots/criar-conta-desktop.png) |
-| Open ticket | ![Open ticket desktop](screenshots/abrir-chamado-desktop.png) |
-| Client area | ![Client area desktop](screenshots/area-cliente-desktop.png) |
-| N1 panel | ![N1 panel desktop](screenshots/painel-n1-desktop.png) |
-| Knowledge base | ![Knowledge base desktop](screenshots/faq-desktop.png) |
+| Create account | ![Create account](screenshots/create-account.-desktop.png) |
+| Open ticket | !![Open ticket](screenshots/submit-a-ticket-desktop.png) |
+| Client area | ![Client area desktop](screenshots/user-page-desktop.png) |
+| N1 panel | ![N1 panel desktop](screenshots/n1-support-page-desktop.png) |
+| Knowledge base | ![Knowledge base desktop](screenshots/knowledge-base-desktop.png) |
 
 Other desktop screenshots available in the screenshots folder: N2, N3.
 
