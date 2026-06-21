@@ -34,9 +34,9 @@ Other desktop screenshots available in the screenshots folder: N2, N3.
 | Screen | Screenshot |
 |--------|-----------|
 | Login | ![Login mobile](screenshots/login-mobile.png) |
-| Client area | ![Client area mobile](screenshots/area-cliente-mobile.png) |
-| Tech panel | ![Tech panel mobile](screenshots/painel-tecnico-mobile.png) |
-| Knowledge base | ![Knowledge base mobile](screenshots/faq-mobile.png) |
+| Client area | ![Client area mobile](screenshots/user-page-mobile.png) |
+| Tech panel | ![Tech panel mobile](screenshots/support-page-mobile.png) |
+| Knowledge base | ![Knowledge base mobile](screenshots/knowledge-base-mobile.png) |
 
 All screenshots are in the screenshots folder.
 
